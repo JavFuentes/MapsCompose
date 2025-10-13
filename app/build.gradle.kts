@@ -83,6 +83,15 @@ dependencies {
     // Iconos extendidos de material
     implementation(libs.androidx.compose.material.icons.extended)
 
+    // Accompanist Permissions
+    implementation(libs.accompanist.permissions)
+
+    // Google Play Services Location
+    implementation(libs.play.services.location)
+
+    // Kotlin Coroutines para Google Play Services
+    implementation(libs.kotlinx.coroutines.play.services)
+
     //Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
