@@ -3,6 +3,7 @@ package android.bootcamp.mapscompose.presentation.screens
 import android.Manifest
 import android.bootcamp.mapscompose.data.LocationManager
 import android.bootcamp.mapscompose.presentation.screens.components.LocationButton
+import android.bootcamp.mapscompose.presentation.screens.components.MapTypeSelector
 import android.bootcamp.mapscompose.presentation.screens.components.ZoomButtons
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
@@ -61,6 +63,12 @@ fun MapScreen() {
     // Observar la ubicación del usuario desde el ViewModel
     val userLocation by viewModel.userLocation.collectAsState()
 
+    // Observar el tipo de mapa desde el ViewModel
+    val mapType by viewModel.mapType.collectAsState()
+
+    // Observar los marcadores personalizados desde el ViewModel
+    val customMarkers by viewModel.customMarkers.collectAsState()
+
     // Crear el estado de la cámara que persistirá durante recomposiciones
     val cameraPositionState = remember {
         CameraPositionState(
@@ -82,9 +90,13 @@ fun MapScreen() {
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
-                properties = MapProperties(mapType = MapType.NORMAL),
+                properties = MapProperties(mapType = mapType),
                 uiSettings = MapUiSettings(zoomControlsEnabled = false),
-                onMapClick = { latLang -> {} }
+                onMapClick = { latLang -> {} },
+                onMapLongClick = { latLng ->
+                    // Agregar marcador con long-press
+                    viewModel.addMarker(latLng)
+                }
                 ){
 
                 // Mostrar marcador en la ubicación del usuario si está disponible
@@ -92,10 +104,37 @@ fun MapScreen() {
                     Marker(
                         state = MarkerState(position = location),
                         title = "Mi ubicación",
-                        snippet = "Lat: ${location.latitude}, Lng: ${location.longitude}"
+                        snippet = "Lat: ${location.latitude}, Lng: ${location.longitude}",
+                        icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)
+                    )
+                }
+
+                // Renderizar marcadores personalizados
+                customMarkers.forEach { marker ->
+                    Marker(
+                        state = MarkerState(position = marker.position),
+                        title = marker.title,
+                        snippet = marker.snippet,
+                        onClick = {
+                            // Eliminar marcador al hacer click en él
+                            viewModel.removeMarker(marker.id)
+                            true // Consumir el evento
+                        },
+                        icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE)
                     )
                 }
             }
+
+            // Selector de tipo de mapa
+            MapTypeSelector(
+                currentMapType = mapType,
+                onMapTypeSelected = { newType ->
+                    viewModel.updateMapType(newType)
+                },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
+            )
 
 
             Column(
