@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -91,6 +92,11 @@ dependencies {
 
     // Kotlin Coroutines para Google Play Services
     implementation(libs.kotlinx.coroutines.play.services)
+
+    // Room
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 
     //Testing
     testImplementation(libs.junit)

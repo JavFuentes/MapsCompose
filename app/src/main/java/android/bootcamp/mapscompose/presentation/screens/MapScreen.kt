@@ -29,11 +29,9 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
-import com.google.maps.android.compose.MapType
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
-import com.google.maps.android.compose.MarkerState.Companion.invoke
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -97,7 +95,8 @@ fun MapScreen() {
                     // Agregar marcador con long-press
                     viewModel.addMarker(latLng)
                 }
-                ){
+
+            ) {
 
                 // Mostrar marcador en la ubicación del usuario si está disponible
                 userLocation?.let { location ->
@@ -136,7 +135,6 @@ fun MapScreen() {
                     .padding(16.dp)
             )
 
-
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
@@ -157,7 +155,8 @@ fun MapScreen() {
 
                 // Controles de zoom
                 ZoomButtons(
-                    cameraPositionState = cameraPositionState)
+                    cameraPositionState = cameraPositionState
+                )
             }
         }
     }
