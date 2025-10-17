@@ -2,6 +2,8 @@ package android.bootcamp.mapscompose.presentation.screens
 
 import android.Manifest
 import android.bootcamp.mapscompose.data.LocationManager
+import android.bootcamp.mapscompose.data.local.AppDatabase
+import android.bootcamp.mapscompose.data.repository.MarkerRepository
 import android.bootcamp.mapscompose.presentation.screens.components.LocationButton
 import android.bootcamp.mapscompose.presentation.screens.components.MapTypeSelector
 import android.bootcamp.mapscompose.presentation.screens.components.ZoomButtons
@@ -37,9 +39,14 @@ import com.google.maps.android.compose.MarkerState
 @Composable
 fun MapScreen() {
     val context = LocalContext.current
+
+    val database = remember { AppDatabase.getDatabase(context) }
+    val markerRepository = remember { MarkerRepository(database.markerDao()) }
+
     val viewModel: MapViewModel = viewModel {
         MapViewModel(
-            locationManager = LocationManager(context)
+            locationManager = LocationManager(context),
+            markerRepository = markerRepository
         )
     }
 

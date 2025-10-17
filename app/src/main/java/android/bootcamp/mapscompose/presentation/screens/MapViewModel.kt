@@ -2,6 +2,7 @@ package android.bootcamp.mapscompose.presentation.screens
 
 import android.bootcamp.mapscompose.data.LocationManager
 import android.bootcamp.mapscompose.data.model.CustomMarker
+import android.bootcamp.mapscompose.data.repository.MarkerRepository
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.maps.model.CameraPosition
@@ -9,13 +10,17 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.MapType
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.WhileSubscribed
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Locale
 
 class MapViewModel(
-    private val locationManager: LocationManager? = null
+    private val locationManager: LocationManager? = null,
+    private val markerRepository: MarkerRepository? = null
 ) : ViewModel() {
 
     //Posición Inicial (Santiago de Chile)
@@ -38,32 +43,42 @@ class MapViewModel(
         _mapType.value = type
     }
 
-    // Estado para los marcadores personalizados
-    private val _customMarkers = MutableStateFlow<List<CustomMarker>>(emptyList())
-    val customMarkers: StateFlow<List<CustomMarker>> = _customMarkers.asStateFlow()
+    // Estado para los marcadores personalizados - se obtinen del Repository
+    val customMarkers: StateFlow<List<CustomMarker>> = markerRepository?.getAllMarkers()
+        ?.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    ) ?: MutableStateFlow(emptyList())
 
     // Método para agregar marcador con long-press en el mapa
     fun addMarker(latLng: LatLng) {
-        val markerNumber = _customMarkers.value.size + 1
-        val newMarker = CustomMarker(
-            position = latLng,
-            title = "Lugar #$markerNumber",
-            snippet = "Lat: ${"%.4f".format(Locale.US, latLng.latitude)}, " +
-                    "Lng: ${"%.4f".format(Locale.US, latLng.longitude)}"
-        )
+        viewModelScope.launch {
+            val markerNumber = customMarkers.value.size + 1
+            val newMarker = CustomMarker(
+                position = latLng,
+                title = "Lugar #$markerNumber",
+                snippet = "Lat: ${"%.4f".format(Locale.US, latLng.latitude)}, " +
+                        "Lng: ${"%.4f".format(Locale.US, latLng.longitude)}"
+            )
 
-        // Crear una nueva lista con el marcador agregado (inmutabilidad)
-        _customMarkers.value = _customMarkers.value + newMarker
+            // Guardar el amrcador en la bbdd
+            markerRepository?.addMarker(newMarker)
+        }
     }
 
     // Método para eliminar marcador por ID
     fun removeMarker(markerId: String) {
-        _customMarkers.value = _customMarkers.value.filter { it.id != markerId }
+        viewModelScope.launch {
+            markerRepository?.removeMarker(markerId)
+        }
     }
 
     // Método para limpiar todos los marcadores
     fun clearAllMarkers() {
-        _customMarkers.value = emptyList()
+        viewModelScope.launch {
+            markerRepository?.removeAllMarkers()
+        }
     }
 
     // Estado para la ubicación del usuario
