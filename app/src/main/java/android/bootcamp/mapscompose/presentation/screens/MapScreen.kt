@@ -1,9 +1,7 @@
 package android.bootcamp.mapscompose.presentation.screens
 
 import android.Manifest
-import android.bootcamp.mapscompose.data.LocationManager
-import android.bootcamp.mapscompose.data.local.AppDatabase
-import android.bootcamp.mapscompose.data.repository.MarkerRepository
+import android.bootcamp.mapscompose.presentation.screens.components.CustomMarkerInfoWindow
 import android.bootcamp.mapscompose.presentation.screens.components.LocationButton
 import android.bootcamp.mapscompose.presentation.screens.components.MapTypeSelector
 import android.bootcamp.mapscompose.presentation.screens.components.ZoomButtons
@@ -21,10 +19,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -34,12 +30,13 @@ import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerInfoWindow
 import com.google.maps.android.compose.MarkerState
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun MapScreen(
-    viewModel: MapViewModel = hiltViewModel()
+    viewModel: MapViewModel = hiltViewModel(),
 ) {
 
     // Solicitar permiso de ubicación
@@ -109,17 +106,24 @@ fun MapScreen(
 
                 // Renderizar marcadores personalizados
                 customMarkers.forEach { marker ->
-                    Marker(
-                        state = MarkerState(position = marker.position),
-                        title = marker.title,
-                        snippet = marker.snippet,
-                        onClick = {
-                            // Eliminar marcador al hacer click en él
+                    //  Estado del marcador personalizado
+                    val markerState = remember(marker.id) {
+                        MarkerState(position = marker.position)
+                    }
+
+                    // MarkerInfoWindow permite personalizar completamente el info window
+                    MarkerInfoWindow(
+                        state = markerState,
+                        onInfoWindowLongClick = {
                             viewModel.removeMarker(marker.id)
-                            true // Consumir el evento
-                        },
-                        icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE)
-                    )
+                        }
+                    ){
+                        CustomMarkerInfoWindow(
+                            title = marker.title,
+                            snippet = marker.snippet
+                        )
+
+                    }
                 }
             }
 
