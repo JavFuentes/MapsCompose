@@ -9,6 +9,7 @@ import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.MapType
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -17,10 +18,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Locale
+import javax.inject.Inject
 
-class MapViewModel(
-    private val locationManager: LocationManager? = null,
-    private val markerRepository: MarkerRepository? = null
+@HiltViewModel
+class MapViewModel @Inject constructor(
+    private val locationManager: LocationManager,
+    private val markerRepository: MarkerRepository
 ) : ViewModel() {
 
     //Posición Inicial (Santiago de Chile)
