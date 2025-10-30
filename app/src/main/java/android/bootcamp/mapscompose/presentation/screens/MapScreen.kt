@@ -13,11 +13,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -33,6 +36,7 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerInfoWindow
 import com.google.maps.android.compose.MarkerState
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -77,6 +81,24 @@ fun MapScreen(
     // Observar la posición pendiente para mostrar el diálogo de nuevo marcador
     val pendingMarkerPosition by viewModel.pendingMarkerPosition.collectAsState()
 
+    // Observar mensajes de validación para mostrar en Snackbar
+    val validationMessage by viewModel.validationMessage.collectAsState()
+
+    // Estado del Snackbar y coroutine scope para mostrarlo
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    // Mostrar Snackbar cuando hay un mensaje de validación
+    LaunchedEffect(validationMessage) {
+        validationMessage?.let { message ->
+            scope.launch {
+                snackbarHostState.showSnackbar(message)
+                // Limpiar el mensaje después de mostrarlo
+                viewModel.clearValidationMessage()
+            }
+        }
+    }
+
     // Mostrar diálogo cuando hay una posición pendiente
     AddMarkerDialog(
         showDialog = pendingMarkerPosition != null,
@@ -90,7 +112,12 @@ fun MapScreen(
         }
     )
 
-    Scaffold { paddingValues ->
+    Scaffold(
+        snackbarHost = {
+            // Host para mostrar Snackbars de validación
+            SnackbarHost(hostState = snackbarHostState)
+        }
+    ) { paddingValues ->
         Box(
             modifier = Modifier
                 .padding(paddingValues)

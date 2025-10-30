@@ -4,6 +4,7 @@ import android.bootcamp.mapscompose.data.LocationManager
 import android.bootcamp.mapscompose.data.SoundManager
 import android.bootcamp.mapscompose.data.model.CustomMarker
 import android.bootcamp.mapscompose.data.repository.MarkerRepository
+import android.location.Location
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.maps.model.CameraPosition
@@ -21,11 +22,14 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 import javax.inject.Inject
 
+// Constante para el radio máximo de distancia permitido (1km en metros)
+private const val MAX_DISTANCE_METERS = 1000f
+
 @HiltViewModel
 class MapViewModel @Inject constructor(
     private val locationManager: LocationManager,
     private val markerRepository: MarkerRepository,
-    private val soundManager: SoundManager
+    private val soundManager: SoundManager,
 ) : ViewModel() {
 
     //Posición Inicial (Santiago de Chile)
@@ -60,11 +64,31 @@ class MapViewModel @Inject constructor(
             initialValue = emptyList()
         ) ?: MutableStateFlow(emptyList())
 
-    // Método para iniciar el proceso de agregar marcador (muestra el diálogo)
+
+    // Estado para mensajes de validación (se muestran en Snackbar)
+    private val _validationMessage = MutableStateFlow<String?>(null)
+    val validationMessage: StateFlow<String?> = _validationMessage.asStateFlow()
+
+    // Método para iniciar el proceso de agregar marcador (con validaciones)
     fun addMarker(latLng: LatLng) {
+        // Validación 1: Verificar que la ubicación del usuario esté disponible
+        val currentUserLocation = _userLocation.value
+        if (currentUserLocation == null) {
+            _validationMessage.value = "Primero activa tu ubicación usando el botón GPS"
+            return
+        }
+
+        // Validación 2: Calcular distancia y verificar que esté dentro del radio permitido
+        val distance = calculateDistance(currentUserLocation, latLng)
+        if (distance > MAX_DISTANCE_METERS) {
+            _validationMessage.value =
+                "El marcador debe estar dentro de 1km de tu ubicación (distancia: ${distance.toInt()}m)"
+            return
+        }
+
+        // Si pasa las validaciones, guardar la posición pendiente (activa el diálogo)
         _pendingMarkerPosition.value = latLng
     }
-
 
     // Método para confirmar la creación del marcador con datos del usuario
     fun confirmAddMarker(title: String, snippet: String?) {
@@ -104,6 +128,11 @@ class MapViewModel @Inject constructor(
         }
     }
 
+    // Método para limpiar mensajes de validación (cierra el Snackbar)
+    fun clearValidationMessage() {
+        _validationMessage.value = null
+    }
+
     // Método para limpiar todos los marcadores
     fun clearAllMarkers() {
         viewModelScope.launch {
@@ -130,7 +159,7 @@ class MapViewModel @Inject constructor(
 
             //Reproducir el sonido de inicio
 
-            if(hasPermission && targetLocation != defaultLocation){
+            if (hasPermission && targetLocation != defaultLocation) {
                 soundManager.playStartSound()
             }
 
@@ -144,5 +173,16 @@ class MapViewModel @Inject constructor(
                 durationMs = 1500 // 1.5 segundos de animación
             )
         }
+    }
+
+    // Método privado para calcular distancia entre dos coordenadas (en metros)
+    private fun calculateDistance(from: LatLng, to: LatLng): Float {
+        val results = FloatArray(1)
+        Location.distanceBetween(
+            from.latitude, from.longitude,
+            to.latitude, to.longitude,
+            results
+        )
+        return results[0]
     }
 }
