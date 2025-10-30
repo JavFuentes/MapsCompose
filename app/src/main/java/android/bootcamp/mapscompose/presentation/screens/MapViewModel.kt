@@ -1,6 +1,7 @@
 package android.bootcamp.mapscompose.presentation.screens
 
 import android.bootcamp.mapscompose.data.LocationManager
+import android.bootcamp.mapscompose.data.SoundManager
 import android.bootcamp.mapscompose.data.model.CustomMarker
 import android.bootcamp.mapscompose.data.repository.MarkerRepository
 import androidx.lifecycle.ViewModel
@@ -24,6 +25,7 @@ import javax.inject.Inject
 class MapViewModel @Inject constructor(
     private val locationManager: LocationManager,
     private val markerRepository: MarkerRepository,
+    private val soundManager: SoundManager
 ) : ViewModel() {
 
     //Posición Inicial (Santiago de Chile)
@@ -94,6 +96,9 @@ class MapViewModel @Inject constructor(
 
     // Método para eliminar marcador por ID
     fun removeMarker(markerId: String) {
+        // Reproducir sonido de borrado
+        soundManager.playDeleteSound()
+
         viewModelScope.launch {
             markerRepository.removeMarker(markerId)
         }
@@ -122,6 +127,13 @@ class MapViewModel @Inject constructor(
 
             // Actualizar el estado de la ubicación del usuario para mostrar el marcador
             _userLocation.value = targetLocation
+
+            //Reproducir el sonido de inicio
+
+            if(hasPermission && targetLocation != defaultLocation){
+                soundManager.playStartSound()
+            }
+
 
             // Animar la cámara a la ubicación
             cameraPositionState.animate(
