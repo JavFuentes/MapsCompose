@@ -1,6 +1,7 @@
 package android.bootcamp.mapscompose.presentation.screens
 
 import android.Manifest
+import android.bootcamp.mapscompose.presentation.screens.components.AddMarkerDialog
 import android.bootcamp.mapscompose.presentation.screens.components.CustomMarkerInfoWindow
 import android.bootcamp.mapscompose.presentation.screens.components.LocationButton
 import android.bootcamp.mapscompose.presentation.screens.components.MapTypeSelector
@@ -72,6 +73,22 @@ fun MapScreen(
             )
         )
     }
+
+    // Observar la posición pendiente para mostrar el diálogo de nuevo marcador
+    val pendingMarkerPosition by viewModel.pendingMarkerPosition.collectAsState()
+
+    // Mostrar diálogo cuando hay una posición pendiente
+    AddMarkerDialog(
+        showDialog = pendingMarkerPosition != null,
+        onDismiss = {
+            // Usuario canceló la creación del marcador
+            viewModel.cancelAddMarker()
+        },
+        onConfirm = { title, snippet ->
+            // Usuario confirmó con título y snippet
+            viewModel.confirmAddMarker(title, snippet)
+        }
+    )
 
     Scaffold { paddingValues ->
         Box(
@@ -164,3 +181,4 @@ fun MapScreen(
         }
     }
 }
+

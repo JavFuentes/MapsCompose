@@ -23,7 +23,7 @@ import javax.inject.Inject
 @HiltViewModel
 class MapViewModel @Inject constructor(
     private val locationManager: LocationManager,
-    private val markerRepository: MarkerRepository
+    private val markerRepository: MarkerRepository,
 ) : ViewModel() {
 
     //Posición Inicial (Santiago de Chile)
@@ -46,41 +46,63 @@ class MapViewModel @Inject constructor(
         _mapType.value = type
     }
 
+    // Estado para posición pendiente de marcador (activa el diálogo cuando no es null)
+    private val _pendingMarkerPosition = MutableStateFlow<LatLng?>(null)
+    val pendingMarkerPosition: StateFlow<LatLng?> = _pendingMarkerPosition.asStateFlow()
+
     // Estado para los marcadores personalizados - se obtinen del Repository
     val customMarkers: StateFlow<List<CustomMarker>> = markerRepository?.getAllMarkers()
         ?.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
-    ) ?: MutableStateFlow(emptyList())
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        ) ?: MutableStateFlow(emptyList())
 
-    // Método para agregar marcador con long-press en el mapa
+    // Método para iniciar el proceso de agregar marcador (muestra el diálogo)
     fun addMarker(latLng: LatLng) {
+        _pendingMarkerPosition.value = latLng
+    }
+
+
+    // Método para confirmar la creación del marcador con datos del usuario
+    fun confirmAddMarker(title: String, snippet: String?) {
         viewModelScope.launch {
-            val markerNumber = customMarkers.value.size + 1
+            // Obtener la posición pendiente
+            val position = _pendingMarkerPosition.value ?: return@launch
+
+            //Crear el marcador con los datos ingresados por el usuario
             val newMarker = CustomMarker(
-                position = latLng,
-                title = "Lugar #$markerNumber",
-                snippet = "Lat: ${"%.4f".format(Locale.US, latLng.latitude)}, " +
-                        "Lng: ${"%.4f".format(Locale.US, latLng.longitude)}"
+                position = position,
+                title = title,
+                snippet = snippet
             )
 
-            // Guardar el amrcador en la bbdd
-            markerRepository?.addMarker(newMarker)
+            // Guardar el marcador en la bbdd
+            markerRepository.addMarker(newMarker)
+
+            // Limpiar la posición pendiente (cierra el diálogo)
+            _pendingMarkerPosition.value = null
         }
     }
+
+    // Método para cancelar la creación del marcador
+    fun cancelAddMarker() {
+        // Limpiar la posición pendiente (cierra el diálogo sin guardar)
+        _pendingMarkerPosition.value = null
+    }
+
 
     // Método para eliminar marcador por ID
     fun removeMarker(markerId: String) {
         viewModelScope.launch {
-            markerRepository?.removeMarker(markerId)
+            markerRepository.removeMarker(markerId)
         }
     }
 
     // Método para limpiar todos los marcadores
     fun clearAllMarkers() {
         viewModelScope.launch {
-            markerRepository?.removeAllMarkers()
+            markerRepository.removeAllMarkers()
         }
     }
 
@@ -93,7 +115,7 @@ class MapViewModel @Inject constructor(
     fun centerOnUserLocation(cameraPositionState: CameraPositionState, hasPermission: Boolean) {
         viewModelScope.launch {
             val targetLocation = if (hasPermission) {
-                locationManager?.getCurrentLocation() ?: defaultLocation
+                locationManager.getCurrentLocation() ?: defaultLocation
             } else {
                 defaultLocation
             }
